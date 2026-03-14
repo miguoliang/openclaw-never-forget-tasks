@@ -1,0 +1,46 @@
+{
+  "name": "openclaw-never-forget-tasks",
+  "version": "0.1.0",
+  "description": "多 Agent 场景下的任务记录与进度跟踪（不能忘任务），MCP Server",
+  "type": "module",
+  "main": "dist/mcp-server.js",
+  "exports": {
+    ".": "./dist/mcp-server.js",
+    "./store": "./dist/store.js",
+    "./report": "./dist/report.js",
+    "./models": "./dist/models.js"
+  },
+  "bin": {
+    "openclaw-tasks": "dist/mcp-server.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/mcp-server.js",
+    "dev": "tsx src/mcp-server.ts",
+    "mcp": "tsx src/mcp-server.ts",
+    "example": "tsx examples/ceo-workflow.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "agents",
+    "task-tracking",
+    "multi-agent",
+    "openclaw"
+  ],
+  "author": "OpenClaw",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "better-sqlite3": "^11.10.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.0"
+  }
+}
