@@ -190,6 +190,16 @@ npx tsx examples/ceo-workflow.ts
 
 演示：CEO 分配三条有依赖的任务 → 模拟 research/design 完成 → 两次查看进度汇报（阻塞/可执行变化）。
 
+## 如何测试
+
+| 方式 | 命令/步骤 | 验证什么 |
+|------|-----------|----------|
+| **1. 跑示例脚本（最快）** | `npm run build && npm run example` | 库 + 存储 + 汇报逻辑：分配任务、更新状态、查进度、阻塞/可执行变化 |
+| **2. MCP Server** | `npm run mcp`，在 Cursor/Claude 里配置 MCP 指向该进程，对话里让 AI 调用 `task_assign`、`task_get_progress_report` 等 | MCP 暴露的 7 个工具是否可用 |
+| **3. OpenClaw 插件** | 按上文「如何试运行插件」安装并启用，在 OpenClaw 里让 Agent 分配任务、查进度 | 插件在 OpenClaw 内注册的 Agent Tools 是否可用 |
+
+建议先跑 **1** 确认本地逻辑正常，再按需试 **2** 或 **3**。
+
 ## 项目结构
 
 ```
