@@ -1,5 +1,5 @@
 {
-  "name": "openclaw-never-forget-tasks",
+  "name": "@miguoliang/openclaw-never-forget-tasks",
   "version": "0.1.0",
   "description": "多 Agent 场景下的任务记录与进度跟踪（不能忘任务），MCP Server",
   "type": "module",
@@ -31,8 +31,15 @@
     "multi-agent",
     "openclaw"
   ],
-  "author": "OpenClaw",
+  "author": "Frank Mi",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/miguoliang/openclaw-never-forget-tasks.git"
+  },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist",
     "src",

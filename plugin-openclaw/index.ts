@@ -7,8 +7,8 @@
 import { join } from "path";
 import { homedir } from "os";
 import { Type } from "@sinclair/typebox";
-import { TaskStore, isValidStatus } from "openclaw-never-forget-tasks/store";
-import { formatReportForAgent } from "openclaw-never-forget-tasks/report";
+import { TaskStore, isValidStatus } from "@miguoliang/openclaw-never-forget-tasks/store";
+import { formatReportForAgent } from "@miguoliang/openclaw-never-forget-tasks/report";
 
 function textContent(text: string) {
   return { content: [{ type: "text" as const, text }] };

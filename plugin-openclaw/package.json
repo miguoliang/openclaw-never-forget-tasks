@@ -8,7 +8,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "openclaw-never-forget-tasks": "file:..",
+    "@miguoliang/openclaw-never-forget-tasks": "file:..",
     "@sinclair/typebox": "^0.34.0"
   },
   "devDependencies": {
