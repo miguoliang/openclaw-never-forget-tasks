@@ -52,7 +52,11 @@ export function taskFromRow(row: Record<string, unknown>): Task {
   const parseList = (v: unknown): string[] =>
     Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : JSON.parse(String(v ?? "[]"));
   const parseMeta = (v: unknown): Record<string, unknown> =>
-    typeof v === "object" && v !== null ? (v as Record<string, unknown>) : {};
+    typeof v === "object" && v !== null
+      ? (v as Record<string, unknown>)
+      : typeof v === "string"
+        ? JSON.parse(v || "{}")
+        : {};
   return {
     id: String(row.id),
     assignee: String(row.assignee),

@@ -2,6 +2,8 @@
 
 import Database from "better-sqlite3";
 import { randomUUID } from "crypto";
+import { join } from "path";
+import { homedir } from "os";
 import type { Task, TaskStatusType } from "./models.js";
 import { taskFromRow } from "./models.js";
 
@@ -21,8 +23,9 @@ export function isValidStatus(s: string): s is TaskStatusType {
 export class TaskStore {
   private db: Database.Database;
 
-  constructor(dbPath: string = "openclaw_tasks.db") {
-    this.db = new Database(dbPath);
+  constructor(dbPath?: string) {
+    const resolvedPath = dbPath ?? join(homedir(), ".openclaw", "openclaw_tasks.db");
+    this.db = new Database(resolvedPath);
     this.initSchema();
   }
 

@@ -18,7 +18,7 @@
 ## 安装与运行
 
 ```bash
-git clone <repo>
+git clone https://github.com/miguoliang/openclaw-never-forget-tasks.git
 cd openclaw-never-forget-tasks
 npm install
 ```
@@ -247,3 +247,38 @@ openclaw-never-forget-tasks/
 ## License
 
 MIT
+
+## Troubleshooting
+
+**插件加载后报 `SqliteError: unable to open database file`**
+
+默认 db 路径是 `~/.openclaw/openclaw_tasks.db`。如果 `~/.openclaw/` 目录不存在，SQLite 无法创建文件。确保目录存在：
+
+```bash
+mkdir -p ~/.openclaw
+```
+
+或在插件配置里指定一个已存在目录下的路径：
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "never-forget-tasks": {
+        "config": { "dbPath": "/your/path/openclaw_tasks.db" }
+      }
+    }
+  }
+}
+```
+
+**`tools.allow` 报 unknown entries (never-forget-tasks)**
+
+说明插件没加载成功。检查：
+1. `openclaw plugins list` 里是否有 `never-forget-tasks`
+2. `openclaw plugins doctor` 是否有报错
+3. Gateway 日志（`/tmp/openclaw/openclaw-*.log`）里搜 `never-forget` 看具体错误
+
+**MCP Server 和插件共用同一个 db**
+
+设置环境变量 `OPENCLAW_TASKS_DB` 或在两边都配置相同的 dbPath，即可共用数据。

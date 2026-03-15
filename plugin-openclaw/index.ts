@@ -4,6 +4,8 @@
  * 使用与 MCP Server 相同的核心库（TaskStore、formatReportForAgent），数据可共用同一 SQLite 库。
  */
 
+import { join } from "path";
+import { homedir } from "os";
 import { Type } from "@sinclair/typebox";
 import { TaskStore, isValidStatus } from "openclaw-never-forget-tasks/store";
 import { formatReportForAgent } from "openclaw-never-forget-tasks/report";
@@ -14,10 +16,11 @@ function textContent(text: string) {
 
 export default function (api: { registerTool: Function; getConfig?: () => Record<string, unknown> }) {
   const config = api.getConfig?.() ?? {};
+  const defaultDbPath = join(homedir(), ".openclaw", "openclaw_tasks.db");
   const dbPath =
     (config.dbPath as string) ??
     process.env.OPENCLAW_TASKS_DB ??
-    "openclaw_tasks.db";
+    defaultDbPath;
   const store = new TaskStore(dbPath);
 
   // task_assign

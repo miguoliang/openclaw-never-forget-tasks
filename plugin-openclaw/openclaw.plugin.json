@@ -5,7 +5,7 @@
   "description": "多 Agent 场景下的任务记录与进度跟踪，供 CEO Agent 分配/查询/更新任务",
   "configSchema": {
     "type": "object",
-    "additionalProperties": false,
+    "additionalProperties": true,
     "properties": {
       "dbPath": {
         "type": "string",

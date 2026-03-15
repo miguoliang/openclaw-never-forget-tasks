@@ -18,7 +18,8 @@
     "start": "node dist/mcp-server.js",
     "dev": "tsx src/mcp-server.ts",
     "mcp": "tsx src/mcp-server.ts",
-    "example": "tsx examples/ceo-workflow.ts"
+    "example": "tsx examples/ceo-workflow.ts",
+    "test": "vitest run"
   },
   "engines": {
     "node": ">=20"
@@ -32,6 +33,15 @@
   ],
   "author": "OpenClaw",
   "license": "MIT",
+  "files": [
+    "dist",
+    "src",
+    "plugin-openclaw",
+    "examples",
+    "docs",
+    "LICENSE",
+    "README.md"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "better-sqlite3": "^11.10.0",
@@ -41,6 +51,7 @@
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^22.0.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.0"
   }
 }

@@ -6,10 +6,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { join } from "path";
+import { homedir } from "os";
 import { TaskStore, isValidStatus } from "./store.js";
 import { formatReportForAgent } from "./report.js";
 
-const dbPath = process.env.OPENCLAW_TASKS_DB ?? "openclaw_tasks.db";
+const defaultDbPath = join(homedir(), ".openclaw", "openclaw_tasks.db");
+const dbPath = process.env.OPENCLAW_TASKS_DB ?? defaultDbPath;
 const store = new TaskStore(dbPath);
 
 const server = new McpServer({
