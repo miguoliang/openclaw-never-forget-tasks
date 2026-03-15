@@ -43,7 +43,11 @@
   "files": [
     "dist",
     "src",
-    "plugin-openclaw",
+    "plugin-openclaw/index.ts",
+    "plugin-openclaw/package.json",
+    "plugin-openclaw/tsconfig.json",
+    "plugin-openclaw/openclaw.plugin.json",
+    "plugin-openclaw/dist",
     "examples",
     "docs",
     "LICENSE",
