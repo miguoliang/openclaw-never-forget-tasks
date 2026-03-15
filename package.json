@@ -49,7 +49,6 @@
     "plugin-openclaw/openclaw.plugin.json",
     "plugin-openclaw/dist",
     "examples",
-    "docs",
     "LICENSE",
     "README.md"
   ],

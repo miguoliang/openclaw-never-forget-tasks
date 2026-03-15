@@ -203,7 +203,7 @@ npm test
 | **3. OpenClaw Plugin** | Follow the Quick Start Guide above | Plugin-registered Agent Tools |
 | **4. Unit tests** | `npm test` | 30 tests covering models, store, report |
 
-For full-auto multi-agent collaboration roadmap (claimable tasks, reassignment/retry, priority, roles, output passing), see [docs/ROADMAP.md](docs/ROADMAP.md).
+For full-auto multi-agent collaboration roadmap (claimable tasks, reassignment/retry, priority, roles, output passing), see the [project website](https://miguoliang.github.io/openclaw-never-forget-tasks/).
 
 ## Project Structure
 
@@ -213,10 +213,8 @@ openclaw-never-forget-tasks/
 ├── package.json
 ├── tsconfig.json
 ├── vitest.config.ts
-├── docs/
-│   ├── ARCHITECTURE.md   # Architecture: Library / MCP / OpenClaw Plugin
-│   ├── ROADMAP.md         # Full-auto multi-agent collaboration roadmap
-│   └── SEQUENCE.md        # Sequence diagrams
+├── website/
+│   └── index.html         # Project website (GitHub Pages)
 ├── src/
 │   ├── models.ts          # Task types and serialization
 │   ├── store.ts           # TaskStore (SQLite)
