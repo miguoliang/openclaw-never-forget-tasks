@@ -1,6 +1,6 @@
 /**
- * 示例：CEO Agent 管理多 Agent 的任务流。
- * 运行: npx tsx examples/ceo-workflow.ts
+ * Example: CEO Agent managing a multi-agent task workflow.
+ * Run: npx tsx examples/ceo-workflow.ts
  */
 
 import { TaskStore } from "../src/store.js";
@@ -17,60 +17,60 @@ if (existsSync(dbPath)) {
 
 const store = new TaskStore(dbPath);
 
-console.log("=== 1. CEO 分配任务 ===\n");
+console.log("=== 1. CEO assigns tasks ===\n");
 
 const tResearch = store.assign({
   assignee: "agent_research",
-  title: "完成 Q1 市场调研报告",
-  description: "竞品分析 + 用户访谈结论",
+  title: "Complete Q1 market research report",
+  description: "Competitive analysis + user interview conclusions",
   due_at: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
   assigned_by: "ceo_agent",
 });
-console.log(`  已分配: [${tResearch.id}] agent_research -> ${tResearch.title}`);
+console.log(`  Assigned: [${tResearch.id}] agent_research -> ${tResearch.title}`);
 
 const tDesign = store.assign({
   assignee: "agent_design",
-  title: "根据调研结论做产品原型",
-  description: "高保真原型，标注优先级",
+  title: "Create product prototype based on research",
+  description: "High-fidelity prototype with priority labels",
   predecessor_ids: [tResearch.id],
   due_at: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
   assigned_by: "ceo_agent",
 });
-console.log(`  已分配: [${tDesign.id}] agent_design -> ${tDesign.title} (依赖调研)`);
+console.log(`  Assigned: [${tDesign.id}] agent_design -> ${tDesign.title} (depends on research)`);
 
 const tEngineer = store.assign({
   assignee: "agent_engineer",
-  title: "实现原型中的 P0 功能",
-  description: "后端 API + 前端页面",
+  title: "Implement P0 features from prototype",
+  description: "Backend API + frontend pages",
   predecessor_ids: [tDesign.id],
   due_at: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
   assigned_by: "ceo_agent",
 });
-console.log(`  已分配: [${tEngineer.id}] agent_engineer -> ${tEngineer.title} (依赖设计)`);
+console.log(`  Assigned: [${tEngineer.id}] agent_engineer -> ${tEngineer.title} (depends on design)`);
 
-console.log("\n=== 2. 执行进展：research 完成，design 进行中 ===\n");
+console.log("\n=== 2. Progress: research completed, design in progress ===\n");
 
 store.updateStatus(tResearch.id, "completed");
-console.log("  agent_research: 任务已完成");
+console.log("  agent_research: task completed");
 store.updateStatus(tDesign.id, "in_progress");
-console.log("  agent_design: 进行中");
+console.log("  agent_design: in progress");
 
-console.log("\n=== 3. CEO 定时查看进度汇报 ===\n");
+console.log("\n=== 3. CEO reviews progress report ===\n");
 
 const report = progressReport(store, {});
-console.log("  汇总:", report.summary);
-console.log("  有未完成任务的负责人:", report.assignees_with_open_tasks);
-console.log("  被阻塞任务数:", report.summary.blocked_count, "(engineer 等 design)");
+console.log("  Summary:", report.summary);
+console.log("  Assignees with open tasks:", report.assignees_with_open_tasks);
+console.log("  Blocked task count:", report.summary.blocked_count, "(engineer waiting on design)");
 
-const text = formatReportForAgent(store, { language: "zh" });
-console.log("\n--- 给 CEO Agent 的汇报文本 ---\n");
+const text = formatReportForAgent(store, { language: "en" });
+console.log("\n--- Report for CEO Agent ---\n");
 console.log(text);
 
-console.log("\n=== 4. design 完成后，再查一次 ===\n");
+console.log("\n=== 4. After design completes, check again ===\n");
 
 store.updateStatus(tDesign.id, "completed");
-console.log("  agent_design: 任务已完成\n");
+console.log("  agent_design: task completed\n");
 
-const text2 = formatReportForAgent(store, { language: "zh" });
+const text2 = formatReportForAgent(store, { language: "en" });
 console.log(text2);
-console.log("\n此时 agent_engineer 的任务不再被阻塞，可执行。");
+console.log("\nNow agent_engineer's task is no longer blocked and can proceed.");

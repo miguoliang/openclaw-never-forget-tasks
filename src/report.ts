@@ -1,4 +1,4 @@
-/** 进度汇总与汇报（供 CEO Agent 定时查看） */
+/** Progress summary and reporting (for CEO Agent periodic review) */
 
 import type { TaskStore } from "./store.js";
 import { taskToDict } from "./models.js";
@@ -95,7 +95,7 @@ export function formatReportForAgent(
     max_worker_blocked?: number;
   } = {},
 ): string {
-  const { language = "zh", max_overdue = 20, max_blocked = 20 } = options;
+  const { max_overdue = 20, max_blocked = 20 } = options;
   const r = progressReport(store, {
     by_assignee: true,
     include_overdue: true,
@@ -106,69 +106,7 @@ export function formatReportForAgent(
   const maxFailed = options.max_failed ?? 20;
   const maxWorkerBlocked = options.max_worker_blocked ?? 20;
 
-  if (language === "zh") {
-    const lines = [
-      "【任务进度汇报】",
-      `生成时间: ${r.generated_at}`,
-      "",
-      "一、汇总",
-      `  - 未完成任务总数: ${r.summary.total_open}`,
-      `  - 已逾期: ${r.summary.overdue_count}`,
-      `  - 被阻塞（前序未完成）: ${r.summary.blocked_count}`,
-      `  - 可执行（前序已满足）: ${r.summary.unblocked_pending_count}`,
-      `  - 失败/需关注: ${r.summary.failed_count} 失败, ${r.summary.worker_blocked_count} 已标记阻塞`,
-      "",
-    ];
-    if (r.overdue.length > 0) {
-      lines.push("二、逾期未完成（需优先关注）");
-      for (const t of r.overdue.slice(0, max_overdue)) {
-        lines.push(`  - [${t.id}] ${t.assignee}: ${t.title} (截止: ${t.due_at ?? "无"})`);
-      }
-      if (r.overdue.length > max_overdue) lines.push(`  ... 共 ${r.overdue.length} 条`);
-      lines.push("");
-    }
-    if (r.blocked.length > 0) {
-      lines.push("三、被阻塞任务（等待前序完成）");
-      for (const t of r.blocked.slice(0, max_blocked)) {
-        const pred = (t.predecessor_ids as string[] | undefined)?.join(", ") ?? "";
-        lines.push(`  - [${t.id}] ${t.assignee}: ${t.title} (依赖: ${pred})`);
-      }
-      if (r.blocked.length > max_blocked) lines.push(`  ... 共 ${r.blocked.length} 条`);
-      lines.push("");
-    }
-    if (r.failed.length > 0) {
-      lines.push("四、失败任务（需 CEO 处理后续）");
-      for (const t of r.failed.slice(0, maxFailed)) {
-        const note = (t.status_note as string) || "（未填写原因）";
-        lines.push(`  - [${t.id}] ${t.assignee}: ${t.title}`);
-        lines.push(`    原因: ${note}`);
-      }
-      if (r.failed.length > maxFailed) lines.push(`  ... 共 ${r.failed.length} 条`);
-      lines.push("");
-    }
-    if (r.worker_blocked.length > 0) {
-      lines.push("五、已标记阻塞/卡住（需 CEO 处理后续）");
-      for (const t of r.worker_blocked.slice(0, maxWorkerBlocked)) {
-        const note = (t.status_note as string) || "（未填写原因）";
-        lines.push(`  - [${t.id}] ${t.assignee}: ${t.title}`);
-        lines.push(`    原因: ${note}`);
-      }
-      if (r.worker_blocked.length > maxWorkerBlocked) lines.push(`  ... 共 ${r.worker_blocked.length} 条`);
-      lines.push("");
-    }
-    const sectionNum = r.failed.length > 0 || r.worker_blocked.length > 0 ? "六" : "四";
-    lines.push(`${sectionNum}、按负责人未完成任务`);
-    for (const [assignee, tasks] of Object.entries(r.by_assignee ?? {})) {
-      lines.push(`  ${assignee}: ${tasks.length} 条`);
-      for (const t of tasks.slice(0, 5)) {
-        lines.push(`    - [${t.id}] ${t.title} | 状态: ${t.status}`);
-      }
-      if (tasks.length > 5) lines.push(`    ... 共 ${tasks.length} 条`);
-    }
-    return lines.join("\n");
-  }
-
-  const linesEn = [
+  const lines = [
     "[Task Progress Report]",
     `Generated: ${r.generated_at}`,
     "",
@@ -181,37 +119,49 @@ export function formatReportForAgent(
     "",
   ];
   if (r.overdue.length > 0) {
-    r.overdue.slice(0, max_overdue).forEach((t) => {
-      linesEn.push(`  - [${t.id}] ${t.assignee}: ${t.title}`);
-    });
-    linesEn.push("");
+    lines.push("Overdue (priority attention needed):");
+    for (const t of r.overdue.slice(0, max_overdue)) {
+      lines.push(`  - [${t.id}] ${t.assignee}: ${t.title} (due: ${t.due_at ?? "none"})`);
+    }
+    if (r.overdue.length > max_overdue) lines.push(`  ... ${r.overdue.length} total`);
+    lines.push("");
   }
   if (r.blocked.length > 0) {
-    r.blocked.slice(0, max_blocked).forEach((t) => {
-      linesEn.push(`  - [${t.id}] ${t.assignee}: ${t.title} (depends on: ${(t.predecessor_ids as string[] | undefined)?.join(", ") ?? []})`);
-    });
-    linesEn.push("");
+    lines.push("Blocked (waiting on predecessors):");
+    for (const t of r.blocked.slice(0, max_blocked)) {
+      const pred = (t.predecessor_ids as string[] | undefined)?.join(", ") ?? "";
+      lines.push(`  - [${t.id}] ${t.assignee}: ${t.title} (depends on: ${pred})`);
+    }
+    if (r.blocked.length > max_blocked) lines.push(`  ... ${r.blocked.length} total`);
+    lines.push("");
   }
   if (r.failed.length > 0) {
-    linesEn.push("Failed (need CEO follow-up):");
-    r.failed.slice(0, maxFailed).forEach((t) => {
+    lines.push("Failed (need CEO follow-up):");
+    for (const t of r.failed.slice(0, maxFailed)) {
       const note = (t.status_note as string) || "(no reason given)";
-      linesEn.push(`  - [${t.id}] ${t.assignee}: ${t.title} — ${note}`);
-    });
-    linesEn.push("");
+      lines.push(`  - [${t.id}] ${t.assignee}: ${t.title}`);
+      lines.push(`    Reason: ${note}`);
+    }
+    if (r.failed.length > maxFailed) lines.push(`  ... ${r.failed.length} total`);
+    lines.push("");
   }
   if (r.worker_blocked.length > 0) {
-    linesEn.push("Marked blocked (need CEO follow-up):");
-    r.worker_blocked.slice(0, maxWorkerBlocked).forEach((t) => {
+    lines.push("Marked blocked (need CEO follow-up):");
+    for (const t of r.worker_blocked.slice(0, maxWorkerBlocked)) {
       const note = (t.status_note as string) || "(no reason given)";
-      linesEn.push(`  - [${t.id}] ${t.assignee}: ${t.title} — ${note}`);
-    });
-    linesEn.push("");
+      lines.push(`  - [${t.id}] ${t.assignee}: ${t.title}`);
+      lines.push(`    Reason: ${note}`);
+    }
+    if (r.worker_blocked.length > maxWorkerBlocked) lines.push(`  ... ${r.worker_blocked.length} total`);
+    lines.push("");
   }
-  linesEn.push("By assignee:");
-  for (const assignee of r.assignees_with_open_tasks ?? []) {
-    const tasks = r.by_assignee?.[assignee] ?? [];
-    linesEn.push(`  ${assignee}: ${tasks.length} task(s)`);
+  lines.push("By assignee:");
+  for (const [assignee, tasks] of Object.entries(r.by_assignee ?? {})) {
+    lines.push(`  ${assignee}: ${tasks.length} task(s)`);
+    for (const t of tasks.slice(0, 5)) {
+      lines.push(`    - [${t.id}] ${t.title} | ${t.status}`);
+    }
+    if (tasks.length > 5) lines.push(`    ... ${tasks.length} total`);
   }
-  return linesEn.join("\n");
+  return lines.join("\n");
 }

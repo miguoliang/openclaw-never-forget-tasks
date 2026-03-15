@@ -1,7 +1,7 @@
 {
   "name": "@miguoliang/openclaw-never-forget-tasks",
   "version": "0.1.0",
-  "description": "多 Agent 场景下的任务记录与进度跟踪（不能忘任务），MCP Server",
+  "description": "Multi-agent task tracking and progress reporting — MCP Server + OpenClaw Plugin",
   "type": "module",
   "main": "dist/mcp-server.js",
   "exports": {

@@ -1,4 +1,4 @@
-/** 任务持久化存储（SQLite） */
+/** Task persistence store (SQLite) */
 
 import Database from "better-sqlite3";
 import { randomUUID } from "crypto";

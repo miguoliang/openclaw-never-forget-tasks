@@ -1,7 +1,7 @@
 /**
- * OpenClaw 插件：不能忘任务
- * 在 OpenClaw 内注册任务相关 Agent Tools，供 CEO Agent 分配/查询/更新任务。
- * 使用与 MCP Server 相同的核心库（TaskStore、formatReportForAgent），数据可共用同一 SQLite 库。
+ * OpenClaw Plugin: Never Forget Tasks
+ * Registers task-related Agent Tools within OpenClaw for CEO Agent to assign/query/update tasks.
+ * Uses the same core library (TaskStore, formatReportForAgent) as the MCP Server, sharing the same SQLite DB.
  */
 
 import { join } from "path";
@@ -27,10 +27,10 @@ export default function (api: { registerTool: Function; getConfig?: () => Record
   api.registerTool(
     {
       name: "task_assign",
-      description: "分配一条任务给某个 agent。返回任务 ID。",
+      description: "Assign a task to an agent. Returns the task ID.",
       parameters: Type.Object({
-        assignee: Type.String({ description: "负责该任务的 agent 名称/ID" }),
-        title: Type.String({ description: "任务标题" }),
+        assignee: Type.String({ description: "Agent name/ID responsible for this task" }),
+        title: Type.String({ description: "Task title" }),
         description: Type.Optional(Type.String()),
         predecessor_ids: Type.Optional(Type.Array(Type.String())),
         due_at_iso: Type.Optional(Type.Union([Type.String(), Type.Null()])),
@@ -45,27 +45,27 @@ export default function (api: { registerTool: Function; getConfig?: () => Record
           due_at: (params.due_at_iso as string | null) ?? null,
           assigned_by: (params.assigned_by as string | null) ?? null,
         });
-        return textContent(`已分配任务 [${t.id}] 给 ${params.assignee}: ${params.title}`);
+        return textContent(`Task [${t.id}] assigned to ${params.assignee}: ${params.title}`);
       },
     },
     { optional: true }
   );
 
-  // task_update_status（仅 assignee 可更新；blocked/failed 必填 status_note）
+  // task_update_status (only assignee can update; blocked/failed requires status_note)
   api.registerTool(
     {
       name: "task_update_status",
       description:
-        "更新任务状态。仅任务负责人(requested_by 与 assignee 一致)可更新。status 可选: pending, in_progress, completed, blocked, failed, cancelled。设为 blocked 或 failed 时必须填写 status_note 说明原因。",
+        "Update task status. Only the assignee (requested_by must match assignee) can update. Valid statuses: pending, in_progress, completed, blocked, failed, cancelled. When setting to blocked or failed, status_note is required.",
       parameters: Type.Object({
         task_id: Type.String(),
         status: Type.String(),
         requested_by: Type.String({
-          description: "当前执行更新的 agent 名称/ID，必须与任务 assignee 一致",
+          description: "Agent name/ID performing the update, must match task assignee",
         }),
         status_note: Type.Optional(
           Type.Union([Type.String(), Type.Null()], {
-            description: "状态为 blocked 或 failed 时必填，说明原因",
+            description: "Required when status is blocked or failed, explaining the reason",
           })
         ),
       }),
@@ -73,30 +73,30 @@ export default function (api: { registerTool: Function; getConfig?: () => Record
         const status = params.status as string;
         if (!isValidStatus(status)) {
           return textContent(
-            `无效状态: ${status}，可选: pending, in_progress, completed, blocked, failed, cancelled`
+            `Invalid status: ${status}. Valid: pending, in_progress, completed, blocked, failed, cancelled`
           );
         }
         const task = store.get(params.task_id as string);
-        if (!task) return textContent(`未找到任务: ${params.task_id}`);
+        if (!task) return textContent(`Task not found: ${params.task_id}`);
         const requestedBy = params.requested_by as string;
         if (task.assignee !== requestedBy) {
           return textContent(
-            `无权限：仅负责人 ${task.assignee} 可更新该任务，当前 requested_by 为 ${requestedBy}`
+            `Permission denied: only assignee ${task.assignee} can update this task, requested_by is ${requestedBy}`
           );
         }
         const needNote = status === "blocked" || status === "failed";
         const note = (params.status_note as string)?.trim() ?? "";
         if (needNote && !note) {
           return textContent(
-            `状态设为 ${status} 时必须填写 status_note 说明原因，便于 CEO 处理后续`
+            `status_note is required when setting status to ${status}`
           );
         }
         const t = store.updateStatus(params.task_id as string, status, {
           status_note: needNote ? note : null,
         });
-        if (!t) return textContent(`更新失败: ${params.task_id}`);
-        const suffix = needNote && note ? `，原因: ${note}` : "";
-        return textContent(`任务 [${params.task_id}] 状态已更新为 ${status}${suffix}`);
+        if (!t) return textContent(`Update failed: ${params.task_id}`);
+        const suffix = needNote && note ? `, reason: ${note}` : "";
+        return textContent(`Task [${params.task_id}] status updated to ${status}${suffix}`);
       },
     },
     { optional: true }
@@ -107,7 +107,7 @@ export default function (api: { registerTool: Function; getConfig?: () => Record
     {
       name: "task_list_by_assignee",
       description:
-        "列出某 agent 的任务。status 不传则返回该 agent 全部任务。",
+        "List tasks for a specific agent. Omit status to return all tasks.",
       parameters: Type.Object({
         assignee: Type.String(),
         status: Type.Optional(Type.Union([Type.String(), Type.Null()])),
@@ -118,7 +118,7 @@ export default function (api: { registerTool: Function; getConfig?: () => Record
         const status =
           statusParam && isValidStatus(statusParam) ? statusParam : undefined;
         const tasks = store.listByAssignee(assignee, status ?? null);
-        if (tasks.length === 0) return textContent(`${assignee} 暂无任务`);
+        if (tasks.length === 0) return textContent(`No tasks for ${assignee}`);
         const lines = tasks.map((t) => `[${t.id}] ${t.title} | ${t.status}`);
         return textContent(lines.join("\n"));
       },
@@ -131,7 +131,7 @@ export default function (api: { registerTool: Function; getConfig?: () => Record
     {
       name: "task_get_progress_report",
       description:
-        "获取进度汇报摘要（逾期、阻塞、按负责人未完成），供 CEO Agent 定时查看。",
+        "Get a progress report summary (overdue, blocked, by assignee) for CEO Agent periodic review.",
       parameters: Type.Object({
         language: Type.Optional(Type.String()),
       }),
@@ -148,11 +148,11 @@ export default function (api: { registerTool: Function; getConfig?: () => Record
   api.registerTool(
     {
       name: "task_list_overdue",
-      description: "列出已逾期且未完成的任务。",
+      description: "List overdue and incomplete tasks.",
       parameters: Type.Object({}),
       async execute() {
         const tasks = store.listOverdue();
-        if (tasks.length === 0) return textContent("无逾期任务");
+        if (tasks.length === 0) return textContent("No overdue tasks");
         const lines = tasks.map(
           (t) => `[${t.id}] ${t.assignee}: ${t.title} (due: ${t.due_at})`
         );
@@ -166,14 +166,14 @@ export default function (api: { registerTool: Function; getConfig?: () => Record
   api.registerTool(
     {
       name: "task_list_blocked",
-      description: "列出因前序未完成而被阻塞的任务。",
+      description: "List tasks blocked by incomplete predecessors.",
       parameters: Type.Object({}),
       async execute() {
         const tasks = store.getBlockedTasks();
-        if (tasks.length === 0) return textContent("无被阻塞任务");
+        if (tasks.length === 0) return textContent("No blocked tasks");
         const lines = tasks.map(
           (t) =>
-            `[${t.id}] ${t.assignee}: ${t.title} (依赖: ${t.predecessor_ids.join(", ")})`
+            `[${t.id}] ${t.assignee}: ${t.title} (depends on: ${t.predecessor_ids.join(", ")})`
         );
         return textContent(lines.join("\n"));
       },
@@ -185,13 +185,13 @@ export default function (api: { registerTool: Function; getConfig?: () => Record
   api.registerTool(
     {
       name: "task_get",
-      description: "根据 ID 查询单条任务详情。",
+      description: "Get task details by ID.",
       parameters: Type.Object({
         task_id: Type.String(),
       }),
       async execute(_id: string, params: Record<string, unknown>) {
         const t = store.get(params.task_id as string);
-        if (!t) return textContent(`未找到任务: ${params.task_id}`);
+        if (!t) return textContent(`Task not found: ${params.task_id}`);
         return textContent(JSON.stringify(t, null, 2));
       },
     },

@@ -1,174 +1,163 @@
-# 主要流程序列图
+# Sequence Diagrams
 
-本文档用序列图说明「不能忘任务」在 **MCP**、**OpenClaw 插件**、**库直接调用** 三种形态下的工作方式。
+This document illustrates how "Never Forget Tasks" works in **MCP**, **OpenClaw Plugin**, and **direct library call** paths.
 
 ---
 
-## 1. MCP 路径：Agent 通过 MCP 调用任务工具
+## 1. MCP Path: Agent calls task tools via MCP
 
-OpenClaw / Cursor / Claude 等作为 MCP 客户端，通过 stdio 与 MCP Server 通信；Agent 看到的是一组 MCP Tools（如 `task_assign`、`task_get_progress_report`）。
+OpenClaw / Cursor / Claude acts as an MCP client, communicating with the MCP Server via stdio. The agent sees MCP Tools like `task_assign` and `task_get_progress_report`.
 
 ```mermaid
 sequenceDiagram
-    participant Agent as CEO Agent
-    participant Client as MCP 客户端<br/>(OpenClaw/Cursor)
-    participant Transport as stdio
-    participant MCP as MCP Server<br/>(mcp-server.js)
+    participant Agent
+    participant Client as MCP Client<br/>(OpenClaw/Cursor)
+    participant Transport as stdio Transport
+    participant MCP as MCP Server
     participant Store as TaskStore
     participant DB as SQLite
 
-    Note over Agent,DB: 启动时
-    Client->>Transport: 启动子进程 (node dist/mcp-server.js)
+    Note over Agent,DB: Startup
     MCP->>Store: new TaskStore(dbPath)
-    Store->>DB: 建表 / 连接
+    Store->>DB: Create tables / connect
 
-    Note over Agent,DB: 运行时：Agent 分配任务
-    Agent->>Client: 决定调用 task_assign(assignee, title, ...)
-    Client->>Transport: MCP Tool Call (task_assign, params)
-    Transport->>MCP: 收到 Tool Call
-    MCP->>Store: store.assign({ assignee, title, ... })
+    Note over Agent,DB: Runtime: Agent assigns task
+    Agent->>Client: Decides to call task_assign(assignee, title, ...)
+    Client->>Transport: Tool Call (JSON-RPC)
+    Transport->>MCP: Receives Tool Call
+    MCP->>Store: store.assign({...})
     Store->>DB: INSERT INTO tasks ...
-    DB-->>Store: ok
-    Store-->>MCP: Task
+    Store-->>MCP: Task object
     MCP-->>Transport: Tool Result (content: text)
-    Transport-->>Client: Result
-    Client-->>Agent: "已分配任务 [id] 给 xxx: 标题"
+    Transport-->>Client: JSON-RPC response
+    Client-->>Agent: "Task [id] assigned to xxx: title"
 
-    Note over Agent,DB: 运行时：Agent 查进度
-    Agent->>Client: 调用 task_get_progress_report(language)
-    Client->>Transport: MCP Tool Call (task_get_progress_report)
-    Transport->>MCP: 收到
-    MCP->>Store: formatReportForAgent(store, { language })
-    Store->>DB: SELECT ... (listOverdue, getBlockedTasks, ...)
-    DB-->>Store: rows
-    Store-->>MCP: 汇总文本
-    MCP-->>Transport: Tool Result (content: 汇报文本)
-    Transport-->>Client: Result
-    Client-->>Agent: 【任务进度汇报】...
+    Note over Agent,DB: Runtime: Agent checks progress
+    Agent->>Client: Calls task_get_progress_report(language)
+    Client->>Transport: Tool Call
+    Transport->>MCP: Receives
+    MCP->>Store: formatReportForAgent(store, {language})
+    Store->>DB: SELECT ... (overdue, blocked, by assignee)
+    Store-->>MCP: Report text
+    MCP-->>Transport: Tool Result (content: report text)
+    Transport-->>Client: JSON-RPC response
+    Client-->>Agent: [Task Progress Report]...
 ```
 
 ---
 
-## 2. OpenClaw 插件路径：进程内 Agent Tools
+## 2. OpenClaw Plugin Path: In-Process Agent Tools
 
-插件在 OpenClaw Gateway 进程内加载，注册一组 Agent Tools；Agent 调用时由 Gateway 直接调用插件的 `execute`，无需单独 MCP 进程。
+The plugin loads within the OpenClaw Gateway process, registering Agent Tools. When the agent calls a tool, Gateway directly invokes the plugin's `execute` — no separate MCP process needed.
 
 ```mermaid
 sequenceDiagram
-    participant Agent as CEO Agent
+    participant Agent
     participant Gateway as OpenClaw Gateway
-    participant Plugin as never-forget-tasks 插件
+    participant Plugin as never-forget-tasks Plugin
     participant Store as TaskStore
     participant DB as SQLite
 
-    Note over Agent,DB: 启动时：加载插件
-    Gateway->>Plugin: 加载 plugin-openclaw (jiti)
-    Plugin->>Plugin: getConfig() / 环境变量 → dbPath
+    Note over Agent,DB: Startup: Load plugin
+    Gateway->>Plugin: Load plugin-openclaw (jiti)
+    Plugin->>Plugin: getConfig() / env var → dbPath
     Plugin->>Store: new TaskStore(dbPath)
-    Store->>DB: 建表 / 连接
-    loop 每个 task_* 工具
-        Plugin->>Gateway: api.registerTool({ name, description, parameters, execute })
+    Store->>DB: Create tables / connect
+    loop For each task_* tool
+        Plugin->>Gateway: api.registerTool(...)
     end
-    Gateway-->>Gateway: 将工具加入 Agent 可用列表
+    Gateway-->>Gateway: Add tools to agent's available list
 
-    Note over Agent,DB: 运行时：Agent 分配任务
-    Agent->>Gateway: 调用 tool: task_assign(assignee, title, ...)
-    Gateway->>Plugin: execute(tool_call_id, params)
-    Plugin->>Store: store.assign(params)
+    Note over Agent,DB: Runtime: Agent assigns task
+    Agent->>Gateway: Call tool: task_assign(assignee, title, ...)
+    Gateway->>Plugin: execute(params)
+    Plugin->>Store: store.assign({...})
     Store->>DB: INSERT INTO tasks ...
-    DB-->>Store: ok
-    Store-->>Plugin: Task
-    Plugin-->>Gateway: { content: [{ type: "text", text: "已分配..." }] }
-    Gateway-->>Agent: 工具返回文本
+    Store-->>Plugin: Task object
+    Plugin-->>Gateway: { content: [{ type: "text", text: "Task assigned..." }] }
+    Gateway-->>Agent: Tool return text
 
-    Note over Agent,DB: 运行时：Agent 查进度
-    Agent->>Gateway: 调用 tool: task_get_progress_report(language)
-    Gateway->>Plugin: execute(tool_call_id, params)
-    Plugin->>Store: formatReportForAgent(store, { language })
-    Store->>DB: SELECT ... (逾期、阻塞、按负责人)
-    DB-->>Store: rows
-    Store-->>Plugin: 汇报文本
-    Plugin-->>Gateway: { content: [{ type: "text", text: "【任务进度汇报】..." }] }
-    Gateway-->>Agent: 汇报内容
+    Note over Agent,DB: Runtime: Agent checks progress
+    Agent->>Gateway: Call tool: task_get_progress_report(language)
+    Gateway->>Plugin: execute(params)
+    Plugin->>Store: formatReportForAgent(store, {language})
+    Store->>DB: SELECT ... (overdue, blocked, by assignee)
+    Store-->>Plugin: Report text
+    Plugin-->>Gateway: { content: [{ type: "text", text: "[Task Progress Report]..." }] }
+    Gateway-->>Agent: Report content
 ```
 
 ---
 
-## 3. 库直接调用：脚本/服务内使用 TaskStore
+## 3. Direct Library Call: Using TaskStore in Scripts/Services
 
-在自有 Node/TS 脚本或服务中直接 `import` 核心库，不经过 MCP 或插件。
+Import the core library directly in your own Node/TS scripts or services, without going through MCP or plugin.
 
 ```mermaid
 sequenceDiagram
-    participant Script as 脚本/服务<br/>(ceo-workflow.ts 等)
+    participant Script as Script/Service<br/>(ceo-workflow.ts etc.)
     participant Store as TaskStore
-    participant Report as report (progressReport, formatReportForAgent)
+    participant Report as report.ts
     participant DB as SQLite
 
     Script->>Store: new TaskStore(dbPath)
-    Store->>DB: 建表 / 连接
+    Store->>DB: Create tables / connect
 
-    Script->>Store: store.assign({ assignee, title, ... })
-    Store->>DB: INSERT INTO tasks
-    DB-->>Store: ok
-    Store-->>Script: Task
+    Script->>Store: store.assign({assignee, title, ...})
+    Store->>DB: INSERT INTO tasks ...
+    Store-->>Script: Task object
 
-    Script->>Store: store.updateStatus(taskId, "completed")
-    Store->>DB: UPDATE tasks SET status=...
-    DB-->>Store: ok
-    Store-->>Script: Task
+    Script->>Store: store.updateStatus(id, "completed")
+    Store->>DB: UPDATE tasks SET status = ...
+    Store-->>Script: Updated Task
 
-    Script->>Report: progressReport(store, options)
-    Report->>Store: listPendingOrInProgress(), listOverdue(), getBlockedTasks(), ...
+    Script->>Report: formatReportForAgent(store, {language})
+    Report->>Store: (same queries)
     Store->>DB: SELECT ...
-    DB-->>Store: rows
-    Store-->>Report: Task[]
-    Report-->>Script: ProgressReport
-
-    Script->>Report: formatReportForAgent(store, { language })
-    Report->>Store: (同上查询)
-    Store->>DB: SELECT ...
-    DB-->>Store: rows
-    Store-->>Report: Task[]
-    Report-->>Script: string (可读汇报文本)
+    Store-->>Report: Task lists
+    Report-->>Script: string (readable report text)
 ```
 
 ---
 
-## 4. 三种形态与核心库的关系（概览）
+## 4. Relationship Between Three Forms and Core Library (Overview)
 
 ```mermaid
-flowchart LR
-    subgraph 调用方
-        A[CEO Agent]
-        B[脚本/服务]
+graph TB
+    subgraph Callers
+        A[OpenClaw / Cursor / Claude]
+        B[Scripts / Services]
     end
 
-    subgraph 对接层
-        M[MCP Server]
-        P[OpenClaw Plugin]
+    subgraph Interface Layer
+        M[MCP Server - stdio]
+        P[OpenClaw Plugin - in-process]
     end
 
-    subgraph 核心库
+    subgraph Core Library
         S[TaskStore]
-        R[formatReportForAgent / progressReport]
+        R[report.ts]
+        Mo[models.ts]
     end
 
     DB[(SQLite)]
 
-    A -->|MCP 协议 stdio| M
-    A -->|Agent Tool 调用| P
-    B -->|import| S
-    B -->|import| R
+    A -->|MCP protocol stdio| M
+    A -->|Agent Tool calls| P
+    B -->|Direct import| S
 
     M --> S
     M --> R
     P --> S
     P --> R
-    S --> DB
+    S --> Mo
     R --> S
+    S --> DB
 ```
 
-- **MCP**：独立进程，通过 stdio 与客户端通信，内部使用 TaskStore + report。
-- **Plugin**：进程内注册 Agent Tools，内部同样使用 TaskStore + report，可与 MCP 共用同一 `dbPath`。
-- **库**：直接使用 TaskStore 与 report，同一套数据与逻辑。
+**Key points**:
+
+- **Library**: Core — models, store, report. Single source of truth.
+- **MCP**: Standalone process, communicates via stdio with clients, uses TaskStore + report internally.
+- **Plugin**: In-process Agent Tools registration, also uses TaskStore + report internally, can share the same `dbPath` with MCP.
+- **Library**: Direct use of TaskStore and report, same data and logic.

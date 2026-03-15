@@ -61,11 +61,11 @@ describe("progressReport", () => {
 });
 
 describe("formatReportForAgent", () => {
-  it("generates Chinese report", () => {
-    store.assign({ assignee: "a", title: "测试任务" });
-    const text = formatReportForAgent(store, { language: "zh" });
-    expect(text).toContain("任务进度汇报");
-    expect(text).toContain("未完成任务总数: 1");
+  it("generates default (English) report", () => {
+    store.assign({ assignee: "a", title: "Test task" });
+    const text = formatReportForAgent(store, { language: "en" });
+    expect(text).toContain("Task Progress Report");
+    expect(text).toContain("Total open: 1");
   });
 
   it("generates English report", () => {
@@ -77,15 +77,15 @@ describe("formatReportForAgent", () => {
 
   it("includes overdue section when tasks are overdue", () => {
     store.assign({ assignee: "a", title: "late", due_at: "2020-01-01T00:00:00Z" });
-    const text = formatReportForAgent(store, { language: "zh" });
-    expect(text).toContain("逾期未完成");
+    const text = formatReportForAgent(store, { language: "en" });
+    expect(text).toContain("Overdue");
   });
 
   it("includes failed section with status_note", () => {
     const t = store.assign({ assignee: "a", title: "broken" });
-    store.updateStatus(t.id, "failed", { status_note: "服务器挂了" });
-    const text = formatReportForAgent(store, { language: "zh" });
-    expect(text).toContain("失败任务");
-    expect(text).toContain("服务器挂了");
+    store.updateStatus(t.id, "failed", { status_note: "server down" });
+    const text = formatReportForAgent(store, { language: "en" });
+    expect(text).toContain("Failed");
+    expect(text).toContain("server down");
   });
 });

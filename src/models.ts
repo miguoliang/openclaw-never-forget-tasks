@@ -1,4 +1,4 @@
-/** 任务与状态模型 */
+/** Task and status models */
 
 export const TaskStatus = {
   PENDING: "pending",
@@ -24,7 +24,7 @@ export interface Task {
   due_at: string | null;
   completed_at: string | null;
   assigned_by: string | null;
-  /** 状态为 blocked / failed 时填写的原因，供 CEO 处理后续 */
+  /** Reason for blocked/failed status, for CEO follow-up */
   status_note: string | null;
   metadata: Record<string, unknown>;
 }

@@ -1,6 +1,6 @@
 /**
- * MCP Server：把「不能忘任务」暴露成 MCP Tools，供 OpenClaw / Cursor / Claude 等调用。
- * 默认使用 stdio；可通过环境变量 OPENCLAW_TASKS_DB 指定 SQLite 路径。
+ * MCP Server: exposes "Never Forget Tasks" as MCP Tools for OpenClaw / Cursor / Claude.
+ * Uses stdio transport by default. Set OPENCLAW_TASKS_DB env var to specify SQLite path.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -26,10 +26,10 @@ const server = new McpServer({
 server.registerTool(
   "task_assign",
   {
-    description: "分配一条任务给某个 agent。返回任务 ID。",
+    description: "Assign a task to an agent. Returns the task ID.",
     inputSchema: z.object({
-      assignee: z.string().describe("负责该任务的 agent 名称/ID"),
-      title: z.string().describe("任务标题"),
+      assignee: z.string().describe("Agent name/ID responsible for this task"),
+      title: z.string().describe("Task title"),
       description: z.string().optional().default(""),
       predecessor_ids: z.array(z.string()).optional().default([]),
       due_at_iso: z.string().optional().nullable(),
@@ -46,26 +46,26 @@ server.registerTool(
       assigned_by: args.assigned_by ?? null,
     });
     return {
-      content: [{ type: "text" as const, text: `已分配任务 [${t.id}] 给 ${args.assignee}: ${args.title}` }],
+      content: [{ type: "text" as const, text: `Task [${t.id}] assigned to ${args.assignee}: ${args.title}` }],
     };
   },
 );
 
-// task_update_status（仅 assignee 可更新自己的任务；设为 blocked/failed 时必填 status_note）
+// task_update_status (only assignee can update; blocked/failed requires status_note)
 server.registerTool(
   "task_update_status",
   {
     description:
-      "更新任务状态。仅任务负责人(requested_by 与 assignee 一致)可更新。status 可选: pending, in_progress, completed, blocked, failed, cancelled。设为 blocked 或 failed 时必须填写 status_note 说明原因，供 CEO 处理后续。",
+      "Update task status. Only the assignee (requested_by must match assignee) can update. Valid statuses: pending, in_progress, completed, blocked, failed, cancelled. When setting to blocked or failed, status_note is required.",
     inputSchema: z.object({
       task_id: z.string(),
       status: z.string(),
-      requested_by: z.string().describe("当前执行更新的 agent 名称/ID，必须与任务 assignee 一致"),
+      requested_by: z.string().describe("Agent name/ID performing the update, must match task assignee"),
       status_note: z
         .string()
         .optional()
         .nullable()
-        .describe("状态为 blocked 或 failed 时必填，说明原因"),
+        .describe("Required when status is blocked or failed, explaining the reason"),
     }),
   },
   async (args) => {
@@ -74,21 +74,21 @@ server.registerTool(
         content: [
           {
             type: "text" as const,
-            text: `无效状态: ${args.status}，可选: pending, in_progress, completed, blocked, failed, cancelled`,
+            text: `Invalid status: ${args.status}. Valid: pending, in_progress, completed, blocked, failed, cancelled`,
           },
         ],
       };
     }
     const task = store.get(args.task_id);
     if (!task) {
-      return { content: [{ type: "text" as const, text: `未找到任务: ${args.task_id}` }] };
+      return { content: [{ type: "text" as const, text: `Task not found: ${args.task_id}` }] };
     }
     if (task.assignee !== args.requested_by) {
       return {
         content: [
           {
             type: "text" as const,
-            text: `无权限：仅负责人 ${task.assignee} 可更新该任务，当前 requested_by 为 ${args.requested_by}`,
+            text: `Permission denied: only assignee ${task.assignee} can update this task, requested_by is ${args.requested_by}`,
           },
         ],
       };
@@ -100,7 +100,7 @@ server.registerTool(
         content: [
           {
             type: "text" as const,
-            text: `状态设为 ${args.status} 时必须填写 status_note 说明原因，便于 CEO 处理后续`,
+            text: `status_note is required when setting status to ${args.status}`,
           },
         ],
       };
@@ -113,8 +113,8 @@ server.registerTool(
         {
           type: "text" as const,
           text: t
-            ? `任务 [${args.task_id}] 状态已更新为 ${args.status}` + (needNote && note ? `，原因: ${note}` : "")
-            : `更新失败: ${args.task_id}`,
+            ? `Task [${args.task_id}] status updated to ${args.status}` + (needNote && note ? `, reason: ${note}` : "")
+            : `Update failed: ${args.task_id}`,
         },
       ],
     };
@@ -125,7 +125,7 @@ server.registerTool(
 server.registerTool(
   "task_list_by_assignee",
   {
-    description: "列出某 agent 的任务。status 不传则返回该 agent 全部任务。",
+    description: "List tasks for a specific agent. Omit status to return all tasks.",
     inputSchema: z.object({
       assignee: z.string(),
       status: z.string().optional().nullable(),
@@ -135,7 +135,7 @@ server.registerTool(
     const status = args.status && isValidStatus(args.status) ? args.status : undefined;
     const tasks = store.listByAssignee(args.assignee, status ?? null);
     if (tasks.length === 0) {
-      return { content: [{ type: "text" as const, text: `${args.assignee} 暂无任务` }] };
+      return { content: [{ type: "text" as const, text: `No tasks for ${args.assignee}` }] };
     }
     const lines = tasks.map((t) => `[${t.id}] ${t.title} | ${t.status}`);
     return { content: [{ type: "text" as const, text: lines.join("\n") }] };
@@ -146,7 +146,7 @@ server.registerTool(
 server.registerTool(
   "task_get_progress_report",
   {
-    description: "获取进度汇报摘要（逾期、阻塞、按负责人未完成），供 CEO Agent 定时查看。",
+    description: "Get a progress report summary (overdue, blocked, by assignee) for CEO Agent periodic review.",
     inputSchema: z.object({
       language: z.string().optional().default("zh"),
     }),
@@ -161,13 +161,13 @@ server.registerTool(
 server.registerTool(
   "task_list_overdue",
   {
-    description: "列出已逾期且未完成的任务。",
+    description: "List overdue and incomplete tasks.",
     inputSchema: z.object({}),
   },
   async () => {
     const tasks = store.listOverdue();
     if (tasks.length === 0) {
-      return { content: [{ type: "text" as const, text: "无逾期任务" }] };
+      return { content: [{ type: "text" as const, text: "No overdue tasks" }] };
     }
     const lines = tasks.map((t) => `[${t.id}] ${t.assignee}: ${t.title} (due: ${t.due_at})`);
     return { content: [{ type: "text" as const, text: lines.join("\n") }] };
@@ -178,15 +178,15 @@ server.registerTool(
 server.registerTool(
   "task_list_blocked",
   {
-    description: "列出因前序未完成而被阻塞的任务。",
+    description: "List tasks blocked by incomplete predecessors.",
     inputSchema: z.object({}),
   },
   async () => {
     const tasks = store.getBlockedTasks();
     if (tasks.length === 0) {
-      return { content: [{ type: "text" as const, text: "无被阻塞任务" }] };
+      return { content: [{ type: "text" as const, text: "No blocked tasks" }] };
     }
-    const lines = tasks.map((t) => `[${t.id}] ${t.assignee}: ${t.title} (依赖: ${t.predecessor_ids.join(", ")})`);
+    const lines = tasks.map((t) => `[${t.id}] ${t.assignee}: ${t.title} (depends on: ${t.predecessor_ids.join(", ")})`);
     return { content: [{ type: "text" as const, text: lines.join("\n") }] };
   },
 );
@@ -195,7 +195,7 @@ server.registerTool(
 server.registerTool(
   "task_get",
   {
-    description: "根据 ID 查询单条任务详情。",
+    description: "Get task details by ID.",
     inputSchema: z.object({
       task_id: z.string(),
     }),
@@ -203,7 +203,7 @@ server.registerTool(
   async (args) => {
     const t = store.get(args.task_id);
     if (!t) {
-      return { content: [{ type: "text" as const, text: `未找到任务: ${args.task_id}` }] };
+      return { content: [{ type: "text" as const, text: `Task not found: ${args.task_id}` }] };
     }
     return { content: [{ type: "text" as const, text: JSON.stringify(t, null, 2) }] };
   },

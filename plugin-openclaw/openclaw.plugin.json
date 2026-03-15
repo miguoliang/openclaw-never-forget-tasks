@@ -1,22 +1,23 @@
 {
   "id": "never-forget-tasks",
-  "name": "不能忘任务",
+  "name": "Never Forget Tasks",
   "version": "0.1.0",
-  "description": "多 Agent 场景下的任务记录与进度跟踪，供 CEO Agent 分配/查询/更新任务",
+  "main": "dist/index.js",
+  "description": "Multi-agent task tracking and progress reporting for CEO Agent to assign/query/update tasks",
   "configSchema": {
     "type": "object",
     "additionalProperties": true,
     "properties": {
       "dbPath": {
         "type": "string",
-        "description": "SQLite 任务库文件路径",
+        "description": "SQLite database file path",
         "default": "openclaw_tasks.db"
       }
     }
   },
   "uiHints": {
     "dbPath": {
-      "label": "任务库路径",
+      "label": "Database Path",
       "placeholder": "openclaw_tasks.db"
     }
   }

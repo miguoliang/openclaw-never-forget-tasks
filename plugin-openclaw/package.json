@@ -1,7 +1,7 @@
 {
   "name": "openclaw-plugin-never-forget-tasks",
   "version": "0.1.0",
-  "description": "OpenClaw 插件：不能忘任务（任务分配与进度跟踪）",
+  "description": "OpenClaw plugin: Never Forget Tasks (task assignment and progress tracking)",
   "type": "module",
   "main": "index.ts",
   "scripts": {
