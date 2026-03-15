@@ -201,6 +201,8 @@ npx tsx examples/ceo-workflow.ts
 
 建议先跑 **1** 确认本地逻辑正常，再按需试 **2** 或 **3**。
 
+**全自动多 Agent 协作**的扩展思路（可领任务、改派/重试、优先级、角色、产出传递等）见 [docs/ROADMAP.md](docs/ROADMAP.md)。
+
 ## 项目结构
 
 ```
@@ -209,7 +211,9 @@ openclaw-never-forget-tasks/
 ├── package.json
 ├── tsconfig.json
 ├── docs/
-│   └── ARCHITECTURE.md   # 形态说明：库 / MCP / OpenClaw Plugin
+│   ├── ARCHITECTURE.md   # 形态说明：库 / MCP / OpenClaw Plugin
+│   ├── ROADMAP.md       # 全自动多 Agent 协作：功能补充建议
+│   └── SEQUENCE.md      # 主要流程序列图
 ├── src/
 │   ├── models.ts         # Task 类型与序列化
 │   ├── store.ts          # TaskStore（SQLite）
