@@ -125,13 +125,14 @@ openclaw plugins doctor
 
 6. **（可选）指定任务库路径**
 
-若想固定任务库位置，在插件配置里设 `dbPath`，例如：
+若想固定任务库位置，在插件配置里设 `dbPath`。OpenClaw 只识别 `plugins.entries.<id>.enabled` 与 `plugins.entries.<id>.config`，**不要**使用 `sourcePath`、`installPath` 等未支持的键：
 
 ```json
 {
   "plugins": {
     "entries": {
       "never-forget-tasks": {
+        "enabled": true,
         "config": { "dbPath": "/path/to/openclaw_tasks.db" }
       }
     }
@@ -139,7 +140,7 @@ openclaw plugins doctor
 }
 ```
 
-不配置则使用环境变量 `OPENCLAW_TASKS_DB` 或当前工作目录下的 `openclaw_tasks.db`。
+本地插件路径请用 CLI 安装（`openclaw plugins install --link <path>`），或通过 `plugins.load.paths` 添加目录数组。不配置则使用环境变量 `OPENCLAW_TASKS_DB` 或当前工作目录下的 `openclaw_tasks.db`。
 
 **没有 OpenClaw 时**：可先跑 MCP Server（`npm run mcp`）并在 Cursor/Claude 里配置 MCP 调用同一套工具；或直接跑示例脚本验证逻辑：`npx tsx examples/ceo-workflow.ts`。
 
